@@ -1,66 +1,68 @@
-# svelte app
+# svelte preprocessor demo
 
-This is a project template for [Svelte](https://svelte.technology) apps. It lives at https://github.com/sveltejs/template.
+You can use HTML, CSS and JS preprocessors with Svelte via `svelte.preprocess` — docs on the [README](https://github.com/sveltejs/svelte#preprocessor-options).
 
-To create a new project based on this template using [degit](https://github.com/Rich-Harris/degit):
+If you're using rollup-plugin-svelte, you can add a `preprocess: {...}` option to your config, and it'll take care of it for you.
 
-```bash
-npm install -g degit # you only need to do this once
+Take a look at [App.html](src/App.html)...
 
-degit sveltejs/template svelte-app
-cd svelte-app
+```html
+<h1>Hello {{name}}!</h1>
+
+<style type='text/scss'>
+  @import 'variables';
+
+  h1 {
+    color: $brand;
+  }
+</style>
 ```
 
-*Note that you will need to have [Node.js](https://nodejs.org) installed.*
+...[variables.scss](src/variables.scss)...
 
-
-## Get started
-
-Install the dependencies...
-
-```bash
-cd svelte-app
-npm install
+```scss
+$brand: rgb(170,30,30);
 ```
 
-...then start [Rollup](https://rollupjs.org):
+...and [rollup.config.js](rollup.config.js):
 
-```bash
-npm run dev
+```js
+plugins: [
+  svelte({
+    // ...
+    preprocess: {
+      style: ({ content, attributes }) => {
+        if (attributes.type !== 'text/scss') return;
+
+        return new Promise((fulfil, reject) => {
+          sass.render({
+            data: content,
+            includePaths: ['src'],
+            sourceMap: true,
+            outFile: 'x' // this is necessary, but is ignored
+          }, (err, result) => {
+            if (err) return reject(err);
+
+            fulfil({
+              code: result.css.toString(),
+              map: result.map.toString()
+            });
+          });
+        });
+      }
+    }
+  }),
+  // ...
+]
 ```
 
-Navigate to [localhost:5000](http://localhost:5000). You should see your app running. Edit a component file in `src`, save it, and reload the page to see your changes.
+## Future work
 
+This is a good start, but we also need the following:
 
-## Deploying to the web
+* Svelte should compose sourcemaps from preprocessors, so that your devtools point all the way back to the code that you authored, *not* the output of `svelte.preprocess`
+* Rather than manually building the preprocessor, as above, it would be better to have a svelte-preprocess-scss package that hid all the boilerplate
+* Support in loaders besides rollup-plugin-svelte
 
-### With [now](https://zeit.co/now)
+As a stretch goal, it would nice if our bundler could know about the dependency on variables.scss.
 
-Install `now` if you haven't already:
-
-```bash
-npm install -g now
-```
-
-Then, from within your project folder:
-
-```bash
-now
-```
-
-As an alternative, use the [Now desktop client](https://zeit.co/download) and simply drag the unzipped project folder to the taskbar icon.
-
-### With [surge](https://surge.sh/)
-
-Install `surge` if you haven't already:
-
-```bash
-npm install -g surge
-```
-
-Then, from within your project folder:
-
-```bash
-npm run build
-surge public
-```
